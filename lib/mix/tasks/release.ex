@@ -28,6 +28,8 @@ defmodule Mix.Tasks.Release do
   @_RUNNER      "runner"
   @_SYSCONFIG   "sys.config"
   @_RELEASE_DEF "release_definition.txt"
+  @_SPEC        "spec"
+  @_INIT_FILE   "init_script"
   @_RELEASES    "{{{RELEASES}}}"
   @_NAME        "{{{PROJECT_NAME}}}"
   @_VERSION     "{{{PROJECT_VERSION}}}"
@@ -49,7 +51,12 @@ defmodule Mix.Tasks.Release do
                dev:        false,
                erl:        "",
                upgrade?:   false,
-               verbosity:  :quiet]
+               verbosity:  :quiet,
+               build_dir:  Path.join(["/", "tmp", "build"]),
+               init_dir:   Path.join(["etc", "init.d"]),
+               rpmbuild:   "/usr/bin/rpmbuild",
+               rpmbuild_opts: "-bb",
+               rpm:        false]
     config
     |> Keyword.merge(args |> parse_args)
     |> prepare_relx
@@ -57,6 +64,9 @@ defmodule Mix.Tasks.Release do
     |> generate_relx_config
     |> generate_runner
     |> do_release
+    |> do_rpm
+    |> do_init_script
+    |> create_rpm
 
     info "Your release is ready!"
   end
@@ -165,6 +175,83 @@ defmodule Mix.Tasks.Release do
     config
   end
 
+  defp do_rpm(config) do
+    rpm?        = config |> Keyword.get(:rpm)
+    if rpm? do
+      IO.puts "Generating rpm..." 
+      priv      = config |> Keyword.get(:priv_path)
+      name      = config |> Keyword.get(:name)
+      version   = config |> Keyword.get(:version)
+      build_dir = config |> Keyword.get(:build_dir)
+      init_dir  = config |> Keyword.get(:init_dir)
+
+      dest          = Path.join([build_dir, "SPECS", "#{name}.spec"])
+      spec          = Path.join([priv, "rel", "files", @_SPEC])
+      app_name      = "#{name}-#{version}.tar.gz"
+      app_tar_path  = Path.join([File.cwd!, "rel", name, app_name])
+      sources_path  = Path.join([build_dir, "SOURCES", app_name])
+
+      build_tmp_build(build_dir, init_dir)
+
+      contents = File.read!(spec)
+        |> String.replace(@_NAME, name)
+        |> String.replace(@_VERSION, version)
+      File.write!(dest, contents)
+
+      File.cp!(app_tar_path, sources_path)
+    end
+    config
+  end
+
+  defp do_init_script(config) do
+    rpm?        = config |> Keyword.get(:rpm)
+    if rpm? do
+      IO.puts "Generating init.d script..." 
+      priv      = config |> Keyword.get(:priv_path)
+      name      = config |> Keyword.get(:name)
+      version   = config |> Keyword.get(:version)
+      build_dir = config |> Keyword.get(:build_dir)
+      init_dir  = config |> Keyword.get(:init_dir)
+
+      sources_dest = Path.join([build_dir, "SOURCES", "#{name}-#{version}-other.tar.gz"])
+      dest = Path.join([build_dir, "TMP", init_dir, "#{name}"])
+      init_file = Path.join([priv, "rel", "files", @_INIT_FILE])
+      tar_root = Path.join(build_dir, "TMP")
+
+      contents = File.read!(init_file)
+        |> String.replace(@_NAME, name)
+      File.write!(dest, contents)
+
+      # TODO: replace this with something erlang or elixir
+      System.cmd "tar czf #{sources_dest} -C #{tar_root} ."
+    end
+    config
+  end
+
+  defp create_rpm(config) do
+    rpm?        = config |> Keyword.get(:rpm)
+    if rpm? do
+      IO.puts "Building rpm..." 
+      name          = config |> Keyword.get(:name)
+      #version       = config |> Keyword.get(:version)
+      rpmbuild      = config |> Keyword.get(:rpmbuild)
+      rpmbuild_opts = config |> Keyword.get(:rpmbuild_opts)
+      build_dir     = config |> Keyword.get(:build_dir)
+      spec_path     = Path.join([build_dir, "SPECS", "#{name}.spec"])
+
+      unless File.exists?(rpmbuild) do
+        IO.puts """
+        Cannot find rpmbuild tool #{rpmbuild}. Skipping rpm build!
+        The generated build files can be found in #{build_dir} 
+        """
+      else
+        System.cmd "#{rpmbuild} #{rpmbuild_opts} #{spec_path}"
+      end 
+    end
+    config
+  end
+
+
   defp do_release(config) do
     debug "Generating release..."
     name      = config |> Keyword.get(:name)
@@ -229,6 +316,15 @@ defmodule Mix.Tasks.Release do
     template
     |> String.replace(@_NAME, name)
     |> String.replace(@_VERSION, version)
+  end
+
+  defp build_tmp_build(build_dir, init_dir) do
+    File.mkdir_p! Path.join([build_dir,"SPECS"])
+    File.mkdir_p! Path.join([build_dir,"SOURCES"])
+    File.mkdir_p! Path.join([build_dir,"RPMS"])
+    File.mkdir_p! Path.join([build_dir,"SRPMS"])
+    File.mkdir_p! Path.join([build_dir,"BUILD"])
+    File.mkdir_p! Path.join([build_dir,"TMP", init_dir])
   end
 
 end
