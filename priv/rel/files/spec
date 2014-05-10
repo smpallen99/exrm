@@ -1,4 +1,5 @@
 %define install_dir     /usr/local
+%define _topdir         {{{PROJECT_TOPDIR}}}
 Name: {{{PROJECT_NAME}}}
 Version: {{{PROJECT_VERSION}}}
 

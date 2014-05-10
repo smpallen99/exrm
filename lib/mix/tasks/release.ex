@@ -36,6 +36,7 @@ defmodule Mix.Tasks.Release do
   @_ERTS_VSN    "{{{ERTS_VERSION}}}"
   @_ERL_OPTS    "{{{ERL_OPTS}}}"
   @_ELIXIR_PATH "{{{ELIXIR_PATH}}}"
+  @_TOPDIR      "{{{PROJECT_TOPDIR}}}"
 
   def run(args) do
     # Ensure this isn't an umbrella project
@@ -196,6 +197,7 @@ defmodule Mix.Tasks.Release do
       contents = File.read!(spec)
         |> String.replace(@_NAME, name)
         |> String.replace(@_VERSION, version)
+        |> String.replace(@_TOPDIR, build_dir)
       File.write!(dest, contents)
 
       File.cp!(app_tar_path, sources_path)
@@ -213,7 +215,7 @@ defmodule Mix.Tasks.Release do
       build_dir = config |> Keyword.get(:build_dir)
       init_dir  = config |> Keyword.get(:init_dir)
 
-      sources_dest = Path.join([build_dir, "SOURCES", "#{name}-#{version}-other.tar.gz"])
+      sources_dest = Path.join([build_dir, "SOURCES", "#{name}-other-#{version}.tar.gz"])
       dest = Path.join([build_dir, "TMP", init_dir, "#{name}"])
       init_file = Path.join([priv, "rel", "files", @_INIT_FILE])
       tar_root = Path.join(build_dir, "TMP")
@@ -321,7 +323,8 @@ defmodule Mix.Tasks.Release do
   defp build_tmp_build(build_dir, init_dir) do
     File.mkdir_p! Path.join([build_dir,"SPECS"])
     File.mkdir_p! Path.join([build_dir,"SOURCES"])
-    File.mkdir_p! Path.join([build_dir,"RPMS"])
+    File.mkdir_p! Path.join([build_dir,"RPMS", "noarch"])
+    File.mkdir_p! Path.join([build_dir,"RPMS", "x86_64"])
     File.mkdir_p! Path.join([build_dir,"SRPMS"])
     File.mkdir_p! Path.join([build_dir,"BUILD"])
     File.mkdir_p! Path.join([build_dir,"TMP", init_dir])
