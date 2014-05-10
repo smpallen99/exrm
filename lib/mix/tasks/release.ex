@@ -30,6 +30,9 @@ defmodule Mix.Tasks.Release do
   @_RELEASE_DEF "release_definition.txt"
   @_SPEC        "spec"
   @_INIT_FILE   "init_script"
+  @_RPM_DIR     "rpm"
+  @_RPM_TEMPLATE_DIR   Path.join([@_RPM_DIR, "templates"])
+
   @_RELEASES    "{{{RELEASES}}}"
   @_NAME        "{{{PROJECT_NAME}}}"
   @_VERSION     "{{{PROJECT_VERSION}}}"
@@ -187,7 +190,7 @@ defmodule Mix.Tasks.Release do
       init_dir  = config |> Keyword.get(:init_dir)
 
       dest          = Path.join([build_dir, "SPECS", "#{name}.spec"])
-      spec          = Path.join([priv, "rel", "files", @_SPEC])
+      spec          = get_rpm_template_path(priv, @_SPEC)
       app_name      = "#{name}-#{version}.tar.gz"
       app_tar_path  = Path.join([File.cwd!, "rel", name, app_name])
       sources_path  = Path.join([build_dir, "SOURCES", app_name])
@@ -217,7 +220,7 @@ defmodule Mix.Tasks.Release do
 
       sources_dest = Path.join([build_dir, "SOURCES", "#{name}-other-#{version}.tar.gz"])
       dest = Path.join([build_dir, "TMP", init_dir, "#{name}"])
-      init_file = Path.join([priv, "rel", "files", @_INIT_FILE])
+      init_file = get_rpm_template_path(priv, @_INIT_FILE) 
       tar_root = Path.join(build_dir, "TMP")
 
       contents = File.read!(init_file)
@@ -328,6 +331,15 @@ defmodule Mix.Tasks.Release do
     File.mkdir_p! Path.join([build_dir,"SRPMS"])
     File.mkdir_p! Path.join([build_dir,"BUILD"])
     File.mkdir_p! Path.join([build_dir,"TMP", init_dir])
+  end
+
+  defp get_rpm_template_path(priv, filename) do
+    custom_location = Path.join([File.cwd!, @_RPM_TEMPLATE_DIR, filename])
+    if File.exists?(custom_location) do 
+      custom_location
+    else
+      Path.join([priv, "rel", "files", filename])
+    end
   end
 
 end
