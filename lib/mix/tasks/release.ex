@@ -56,7 +56,7 @@ defmodule Mix.Tasks.Release do
                erl:        "",
                upgrade?:   false,
                verbosity:  :quiet,
-               build_dir:  Path.join(["/", "tmp", "build"]),
+               build_dir:  Path.join([File.cwd!, "_build", "rpm"]),
                init_dir:   Path.join(["etc", "init.d"]),
                rpmbuild:   "/usr/bin/rpmbuild",
                rpmbuild_opts: "-bb",
@@ -68,7 +68,7 @@ defmodule Mix.Tasks.Release do
     |> generate_relx_config
     |> generate_runner
     |> do_release
-    |> do_rpm
+    |> do_spec
     |> do_init_script
     |> create_rpm
 
@@ -179,7 +179,7 @@ defmodule Mix.Tasks.Release do
     config
   end
 
-  defp do_rpm(config) do
+  defp do_spec(config) do
     rpm?        = config |> Keyword.get(:rpm)
     if rpm? do
       IO.puts "Generating rpm..." 
@@ -187,7 +187,6 @@ defmodule Mix.Tasks.Release do
       name      = config |> Keyword.get(:name)
       version   = config |> Keyword.get(:version)
       build_dir = config |> Keyword.get(:build_dir)
-      init_dir  = config |> Keyword.get(:init_dir)
 
       dest          = Path.join([build_dir, "SPECS", "#{name}.spec"])
       spec          = get_rpm_template_path(priv, @_SPEC)
@@ -195,7 +194,7 @@ defmodule Mix.Tasks.Release do
       app_tar_path  = Path.join([File.cwd!, "rel", name, app_name])
       sources_path  = Path.join([build_dir, "SOURCES", app_name])
 
-      build_tmp_build(build_dir, init_dir)
+      build_tmp_build(build_dir)
 
       contents = File.read!(spec)
         |> String.replace(@_NAME, name)
@@ -214,21 +213,15 @@ defmodule Mix.Tasks.Release do
       IO.puts "Generating init.d script..." 
       priv      = config |> Keyword.get(:priv_path)
       name      = config |> Keyword.get(:name)
-      version   = config |> Keyword.get(:version)
       build_dir = config |> Keyword.get(:build_dir)
-      init_dir  = config |> Keyword.get(:init_dir)
 
-      sources_dest = Path.join([build_dir, "SOURCES", "#{name}-other-#{version}.tar.gz"])
-      dest = Path.join([build_dir, "TMP", init_dir, "#{name}"])
+      dest = Path.join([build_dir, "SOURCES", "#{name}"])
       init_file = get_rpm_template_path(priv, @_INIT_FILE) 
-      tar_root = Path.join(build_dir, "TMP")
 
       contents = File.read!(init_file)
         |> String.replace(@_NAME, name)
       File.write!(dest, contents)
 
-      # TODO: replace this with something erlang or elixir
-      System.cmd "tar czf #{sources_dest} -C #{tar_root} ."
     end
     config
   end
@@ -238,7 +231,6 @@ defmodule Mix.Tasks.Release do
     if rpm? do
       IO.puts "Building rpm..." 
       name          = config |> Keyword.get(:name)
-      #version       = config |> Keyword.get(:version)
       rpmbuild      = config |> Keyword.get(:rpmbuild)
       rpmbuild_opts = config |> Keyword.get(:rpmbuild_opts)
       build_dir     = config |> Keyword.get(:build_dir)
@@ -323,14 +315,13 @@ defmodule Mix.Tasks.Release do
     |> String.replace(@_VERSION, version)
   end
 
-  defp build_tmp_build(build_dir, init_dir) do
+  defp build_tmp_build(build_dir) do
     File.mkdir_p! Path.join([build_dir,"SPECS"])
     File.mkdir_p! Path.join([build_dir,"SOURCES"])
     File.mkdir_p! Path.join([build_dir,"RPMS", "noarch"])
     File.mkdir_p! Path.join([build_dir,"RPMS", "x86_64"])
     File.mkdir_p! Path.join([build_dir,"SRPMS"])
     File.mkdir_p! Path.join([build_dir,"BUILD"])
-    File.mkdir_p! Path.join([build_dir,"TMP", init_dir])
   end
 
   defp get_rpm_template_path(priv, filename) do

@@ -1,5 +1,6 @@
 %define install_dir     /usr/local
 %define _topdir         {{{PROJECT_TOPDIR}}}
+%define temp_dir       /tmp
 Name: {{{PROJECT_NAME}}}
 Version: {{{PROJECT_VERSION}}}
 
@@ -12,7 +13,7 @@ Group:         Applications
 License:       GPL
 URL:           https://github.com/bitwalker/exrm
 Source0:       %{name}-%{version}.tar.gz
-Source1:       %{name}-other-%{version}.tar.gz
+Source1:       %{name}
 BuildRoot:     %{_tmppath}/%{name}-root
 BuildArchitectures: x86_64
 AutoReq:  0
@@ -25,8 +26,9 @@ Some description goes here
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/tmp
 mkdir -p $RPM_BUILD_ROOT/%{install_dir}/%{name}
-tar xzf %{SOURCE1} -C %{buildroot}
-cp %{SOURCE0} %{buildroot}/tmp/
+mkdir -p $RPM_BUILD_ROOT/%{_initrddir}
+cp %{SOURCE0} %{buildroot}/%{temp_dir}/
+cp %{SOURCE1} $RPM_BUILD_ROOT/%{_initrddir}/%{name}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -34,14 +36,14 @@ rm -rf $RPM_BUILD_ROOT
 %post
 if [ $1 -eq 1 ]; then
     # new install
-    tar xzf /tmp/%{name}-%{version}.tar.gz -C %{install_dir}/%{name}
-    rm /tmp/%{name}-%{version}.tar.gz
+    tar xzf %{temp_dir}/%{name}-%{version}.tar.gz -C %{install_dir}/%{name}
+    rm %{temp_dir}/%{name}-%{version}.tar.gz
     /sbin/chkconfig --add %{name}
     /sbin/service %{name} start  > /dev/null 2>&1
 else
     # upgrade
     mkdir %{install_dir}/%{name}/releases/%{version}
-    mv /tmp/%{name}-%{version}.tar.gz %{install_dir}/%{name}/releases/%{version}/%{name}.tar.gz
+    mv %{temp_dir}/%{name}-%{version}.tar.gz %{install_dir}/%{name}/releases/%{version}/%{name}.tar.gz
     cd %{install_dir}/%{name} && bin/%{name} upgrade "%{version}"
 fi
 exit 0
@@ -57,12 +59,12 @@ exit 0
 
 %files
 %defattr(-, root, root, -)
-/tmp/%{name}-%{version}.tar.gz
-%dir /usr/local/%{name}
+%{temp_dir}/%{name}-%{version}.tar.gz
+%dir %{install_dir}/%{name}
 
 %defattr(755, root, root, -)
-/etc/init.d/%{name}
+%{_initrddir}/%{name}
 
 %changelog
-* Sat May 10 2014 Stephen Pallen <steve@example.com> 0.0.2-0
+* Sat May 10 2014 developer name <name@example.com> 0.0.1-0
 - Added support for live upgrades
