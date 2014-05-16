@@ -2,7 +2,9 @@
 
 Thanks to @tylerflint for the original Makefile, rel.config, and runner script which inspired this project!
 
-## Preface 
+## RPM Generation Prototype
+
+### Overview
 
 This is a fork of bitwalker's excellent EXPM package used to prototype rpm support. This branch is functional and provides the following features:
 
@@ -11,7 +13,7 @@ This is a fork of bitwalker's excellent EXPM package used to prototype rpm suppo
 - mix task to copy the rpm and init script templates for customization
 - works for systems without the rpm build tools, generating all the required source files for later rpm build
 
-## TODO
+### TODO
 
 - Add support for clean 
 - Move the rpm to the rel directory
