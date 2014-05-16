@@ -2,6 +2,24 @@
 
 Thanks to @tylerflint for the original Makefile, rel.config, and runner script which inspired this project!
 
+## Preface 
+
+This is a fork of bitwalker's excellent EXPM package used to prototype rpm support. This branch is functional and provides the following features:
+
+- intelligent defaults to generate an rpm which installs the release, an init script, and chkconfig 
+- the rpm handles new installs as well as live upgrades
+- mix task to copy the rpm and init script templates for customization
+- works for systems without the rpm build tools, generating all the required source files for later rpm build
+
+## TODO
+
+- Add support for clean 
+- Move the rpm to the rel directory
+- Add support for other architectures
+- Add configuration support for other spec file variables like description, summary, url, etc 
+- More testing
+- Discard once this functionality once it has been added to the official exrm package
+
 ## Usage
 
 NOTE: Due to a bug in Elixir's compilation process (fixed in v0.13), the v0.12.x versions of Elixir will require you to add `:kernel`, `:stdlib`, and `:elixir` to your projects application dependencies array in order for releases to work for you. If you encounter issues, please let me know and I will work with you to make sure you are able to use exrm with your project.
@@ -24,6 +42,25 @@ will be cleaned up, leaving your project directory the same as if exrm
 had never been run. This is a destructive operation, as you can't get
 your releases back unless they were source-controlled, so exrm will ask
 you for confirmation before proceeding with the cleanup.
+
+- `mix release --rpm` 
+
+This option generates the release and build an RPM using the default spec and init script templates. The generated files can be found in:
+
+- _build/rpm/SPECS/name.spec      # the generated spec file used to build the rpm
+- _build/rpm/SOURCES/name         # the generated init script included in the rpm
+- _build/rpm/RPMS/x86_64/name-version-x86_64.rpm  # the generated rpm
+
+Used the following mix task to customize the rpm
+
+- `mix release.copy_rpm_templates`
+
+This task creates a copy of the spec and init script templates:
+
+- rpm/templates/spec
+- rpm/templates/init_script
+
+You can customize this files. They will be used instead of the defaults on subsequent rpm builds.
 
 ## Getting Started
 
